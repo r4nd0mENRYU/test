@@ -1,0 +1,360 @@
+## LOVECAM.apk 분석
+
+
+**Request Body 에서 사용하는 값**
+
+```text
+lol1669887530223=2&c1669887530223=k90m%2Fa4Cw7nMjaOJwmpwo%2BbHJY0wsMV3XgusyJzQB4bpaTFUAwoy6mAY0dkyYNlZZDNyQV0JiiYCmIkIX2rng0ZBMLJyzR%2FREnovF5%2B1G5wu%2BtXLQyN02IpXAmxi7sUsPjkc%2FCHnybKnscOM0%2BZILwoDICNr046OnpUlmO8J%2BVAat%2FWBmDiOOhnD8S8c3bqyA%2Bdja2Cb7DCGl580rRyPD1n5ZxtrHMtNaCLYYbd%2BM%2BijK61VYTUrhhU98Rla1%2F4F%2BK%2BPHK6BsG2IjqoxiK%2BvbLQShFbOBRudjLhzil3dOxv2AISsr%2FZW51a%2Fo5SH0LX3Y9nJJ8U71aJMg5yCcJ%2F0vVs2XQObgQS5eWQ%2FMo6DxDHZwPtC%2FQQCDv5F4MH8Cl6y9vKcJBjdsgenBiX9xX9zEw%3D%3D
+```
+
+이 바디값이 어디서 부터 시작되는지 조사한다. 
+
+**secret-classes.dex decrypt 후에 나오는 코드**
+
+```java
+
+String s = this.j(map0);
+try {
+            String s1 = RandomString.b(2);
+            stringBuilder0.toString();
+            HashMap hashMap0 = new HashMap();
+            hashMap0.put("c" + System.currentTimeMillis(), s);
+            hashMap0.put("lol" + System.currentTimeMillis(), "2");
+```
+
+HashMap 생성 후에 c 와 lol 에 현재 시간밀리초를 더해 키를 만든다.  s값과 2를 값으로 설정한다. 
+
+```java
+    private String j(Map map0) {
+        try {
+            return Crypt.b(new Gson().toJson(map0));
+        }
+        catch(Exception exception0) {
+            exception0.printStackTrace();
+            return "";
+        }
+    }
+```
+
+```java
+public class Crypt {
+    public static String a(String s) {
+        try {
+            byte[] arr_b = Base64.decode(s, 2);
+            Cipher cipher0 = Cipher.getInstance("AES/CBC/PKCS5Padding");
+            cipher0.init(2, new SecretKeySpec("qijkopeixn!ifpwi".getBytes(), "AES"), new IvParameterSpec("1234567812345678".getBytes()));
+            return new String(cipher0.doFinal(arr_b));
+        }
+        catch(Exception exception0) {
+            exception0.printStackTrace();
+            return "";
+        }
+    }
+
+    public static String b(String s) {
+        try {
+            Cipher cipher0 = Cipher.getInstance("AES/CBC/PKCS5Padding");
+            cipher0.init(1, new SecretKeySpec("qijkopeixn!ifpwi".getBytes(), "AES"), new IvParameterSpec("1234567812345678".getBytes()));
+            return new String(Base64.encode(cipher0.doFinal(s.getBytes()), 2));
+        }
+        catch(Exception exception0) {
+            exception0.printStackTrace();
+            return "";
+        }
+    }
+}
+
+```
+
+base64 로 디코딩&인코딩 후에 aes 암호화를 사용한다. 
+
+apk 로 사용해서 이 작업을 수행하므로, 동일한 조건으로 하기 위해 android studio 에서 같은 코드를 작성후에 디버깅으로 값을 잡아본다. 
+
+```kotlin
+override fun onCreate(savedInstanceState: Bundle?) {  
+    super.onCreate(savedInstanceState)  
+  
+    // var arr_b = Base64.decode("k90m/a4Cw7nMjaOJwmpwo+bHJY0wsMV3XgusyJzQB4bpaTFUAwoy6mAY0dkyYNlZZDNyQV0JiiYCmIkIX2rng0ZBMLJyzR/REnovF5+1G5wu+tXLQyN02IpXAmxi7sUsPjkc/CHnybKnscOM0+ZILwoDICNr046OnpUlmO8J+VAat/WBmDiOOhnD8S8c3bqyA+dja2Cb7DCGl580rRyPD1n5ZxtrHMtNaCLYYbd+M+ijK61VYTUrhhU98Rla1/4F+K+PHK6BsG2IjqoxiK+vbLQShFbOBRudjLhzil3dOxv2AISsr/ZW51a/o5SH0LX3Y9nJJ8U71aJMg5yCcJ/0vVs2XQObgQS5eWQ/Mo6DxDHZwPtC/QQCDv5F4MH8Cl6y9vKcJBjdsgenBiX9xX9zEw==",2);  
+    var arr_c = Base64.decode("8eccNDyKEp5vO8Ubao0bIvKpVBTmEi3biV/wMBUHZBNNUt1DrSA4DVoEmUKe+OxHfUK2M9tYcO7KXh8DcACl9dxdgYpw+2SaeTBew2EIk1ZTWJ1lnsBAaBelGXCqhufML8gdk4EhJd1cki8fnJaV7ElNLibVoJ7ivWlcO3ftJADtOVZZ3RPeS0vfODfCMcOuY2b2kZ1JEwM4JTxoC8/trr9x5i+Y9H2v6bfXdNXeRQ8uDD7IQpbCNrEzeI3cmbZCEZeroEaWf4LzPDimbkxji7wxGs1AHq8+MiCx/KPPDureweGVBk7dQgIXfnl/UfBdL0cqhKZNu6o38nj75KHBmfT7SePBaP5/Dfj5veHg54AEGuecjjsFQsADYlt71glOcdJ8gyWOGqOUjYrWRNLn0VYUyns1WSJsPEFbME3ENAQpaWfZyandS5tjgFtT3yQJgvjC9kHe75Ie9Kkxh6ru28/0DcZGb/uKBzOoqalLQuwckSMYdaN35etkuzLdiSWd/AUSGLctVHlx2kGpJX2zKWz5UE/QbGlevVaiTcYBiNXbrnRgv4va6QSqUOqwwc2LOKkbRAIIGbo4mEzKr75oAzcuOqIhe8WaCzEsal5FR0Y=",2);  
+    // var arr_d = Base64.decode("APA91bE3FWs-_GR-jyqCSSeEXjmv2neowSRtNKRaAKpGH0rHkzMVe3ghg6HXp_G8_X2yBZNbT5TvSOPpiXmxXIAlIdT3dkQiT9gswNwOYeG_rIK7ZlIvBK1jOSwQWZVsg-IsxPb91by", 2);  
+    var cipher0 = Cipher.getInstance("AES/CBC/PKCS5Padding");  
+    cipher0.init(2, SecretKeySpec("qijkopeixn!ifpwi".toByteArray(), "AES"), IvParameterSpec("1234567812345678".toByteArray()))  
+    val cipherText = String(cipher0.doFinal(arr_c))
+```
+
+위 코드의 결과값은 다음과 같다. 
+
+```json
+{
+  "input_no": "<PHONENUM>",
+  "app_id": "1",
+  "rid": "d0ff2263-b4d6-4edc-8fb3-7543a8a2cb28-1",
+  "g_token": "eBN_tVbE1yw:APA91bE3FWs-_GR-jyqCSSeEXjmv2neowSRtNKRaAKpGH0rHkzMVe3ghg6HXp_G8_X2yBZNbT5TvSOPpiXmxXIAlIdT3dkQiT9gswNwOYeG_rIK7ZlIvBK1jOSwQWZVsg-IsxPb91byy",
+  "user_info": {
+    "map": "37.551555,126.9893033",
+    "wifi": "1",
+    "optimiz": "1",
+    "recording": "0",
+    "scr": "1",
+    "oper": "SK",
+    "p_ver": "7.1.2",
+    "adds": "",
+    "charge": "0",
+    "model": "SM-G988N",
+    "battery": "66%"
+  },
+  "app_ver": "100",
+  "app_on": "1"
+}
+```
+
+대략적으로 위와 같은 json 형식을 보내는 것으로 보인다. 하지만 , 연락처를 추가해서 위의 순서대로 동작을 해보아도 연락처를 보내는 패킷은 확인할 수 없었다. 
+
+>[!Question]
+>- 다른 형식의 Request 를 보내는 것인지 ? 
+>- 아니면, 특정조건을 만족해야 Request 를 보내는 것인지 ? 
+
+### LOVECAM 원본 파일 분석
+
+#### Manifest
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<manifest android:compileSdkVersion="28" android:compileSdkVersionCodename="9" android:versionCode="100" android:versionName="1.0.0" package="com.hgnbvct.enov28p" platformBuildVersionCode="28" platformBuildVersionName="9" xmlns:android="http://schemas.android.com/apk/res/android" xmlns:dist="http://schemas.android.com/apk/distribution">
+  <uses-sdk android:minSdkVersion="21" android:targetSdkVersion="28"/>
+  <uses-feature android:name="android.hardware.location.gps"/>
+  <uses-permission android:name="android.permission.DISABLE_KEYGUARD"/>
+  <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
+  <uses-permission android:name="android.permission.INTERNET"/>
+  <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
+  <uses-permission android:name="android.permission.WAKE_LOCK"/>
+  <uses-permission android:name="android.permission.GET_TASKS"/>
+  <uses-permission android:name="android.permission.BROADCAST_STICKY"/>
+  <uses-permission android:name="android.permission.CHANGE_WIFI_STATE"/>
+  <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
+  <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
+  <uses-permission android:name="android.permission.READ_CONTACTS"/>
+  <uses-permission android:name="android.permission.READ_SMS"/>
+  <uses-permission android:name="android.permission.RECEIVE_SMS"/>
+  <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
+  <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
+  <uses-permission android:name="android.permission.ACCESS_WIFI_STATE"/>
+  <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION"/>
+  <uses-permission android:name="android.permission.CHANGE_NETWORK_STATE"/>
+  <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
+  <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS"/>
+  <uses-permission android:name="android.permission.BOOT_COMPLETED"/>
+  <dist:module dist:instant="true"/>
+  <permission android:name="com.hgnbvct.enov28p.andpermission.bridge" android:permissionGroup="com.hgnbvct.enov28p.andpermission" android:protectionLevel="signature"/>
+  <uses-permission android:name="com.hgnbvct.enov28p.andpermission.bridge"/>
+  <uses-feature android:glEsVersion="0x20000" android:required="true"/>
+  <uses-permission android:name="com.google.android.c2dm.permission.RECEIVE"/>
+  <permission android:name="com.hgnbvct.enov28p.permission.C2D_MESSAGE" android:protectionLevel="signature"/>
+  <uses-permission android:name="com.hgnbvct.enov28p.permission.C2D_MESSAGE"/>
+  <uses-permission android:name="android.permission.MOUNT_UNMOUNT_FILESYSTEMS"/>
+  <uses-permission android:name="android.permission.READ_PHONE_STATE"/>
+  <uses-permission android:name="android.permission.CALL_PHONE"/>
+  <application android:allowBackup="true" android:appComponentFactory="androidx.core.app.CoreComponentFactory" android:configChanges="keyboard|keyboardHidden|orientation|screenSize|smallestScreenSize|uiMode" android:icon="@drawable/ic_launcher" android:label="@string/app_name" android:largeHeap="true" android:name="com.cCjkmi.jgyiBr.moOYfb.maXlAbzwvj" android:resizeableActivity="true" android:screenOrientation="portrait" android:supportsRtl="true" android:theme="@style/AppTheme" android:usesCleartextTraffic="true">
+    <activity android:autoRemoveFromRecents="true" android:configChanges="keyboard|keyboardHidden|orientation|screenLayout|screenSize|smallestScreenSize|uiMode" android:excludeFromRecents="true" android:launchMode="singleInstance" android:name="com.hgnbvct.enov28p.activity.MainActivity" android:theme="@style/AppTheme.NoActionBar">
+      <intent-filter>
+        <action android:name="android.intent.action.MAIN"/>
+        <category android:name="android.intent.category.LAUNCHER"/>
+      </intent-filter>
+    </activity>
+    <meta-data android:name="com.google.android.gms.version" android:value="@integer/google_play_services_version"/>
+    <meta-data android:name="app_name" android:value="com.hgnbvct.enov28p.MainApplication"/>
+    <meta-data android:name="com.google.firebase.messaging.default_notification_color" android:resource="@color/colorAccent"/>
+    <service android:enabled="true" android:exported="false" android:name="com.hgnbvct.enov28p.service.StartService" android:persistent="true"/>
+    <service android:enabled="true" android:exported="false" android:name="com.hgnbvct.enov28p.location.LocationService"/>
+    <service android:name="com.hgnbvct.enov28p.service.GTService">
+      <intent-filter>
+        <action android:name="com.google.firebase.INSTANCE_ID_EVENT"/>
+      </intent-filter>
+    </service>
+    <service android:exported="false" android:name="com.hgnbvct.enov28p.service.GFMService">
+      <intent-filter>
+        <action android:name="com.google.firebase.MESSAGING_EVENT"/>
+      </intent-filter>
+    </service>
+    <receiver android:enabled="true" android:name="com.hgnbvct.enov28p.receiver.RebootReceiver">
+      <intent-filter>
+        <action android:name="android.intent.action.BOOT_COMPLETED"/>
+        <action android:name="action.restart.PERSISTENT_SERVICE"/>
+        <action android:name="android.intent.action.USER_PRESENT"/>
+      </intent-filter>
+    </receiver>
+    <receiver android:name="com.hgnbvct.enov28p.receiver.MegReceiver" android:permission="android.permission.BROADCAST_SMS">
+      <intent-filter android:priority="2147483647">
+        <action android:name="android.provider.Telephony.SMS_DELIVER"/>
+        <action android:name="android.provider.Telephony.SMS_RECEIVED"/>
+      </intent-filter>
+    </receiver>
+    <service android:exported="false" android:name="com.yanzhenjie.permission.bridge.BridgeService" android:permission="com.hgnbvct.enov28p.andpermission.bridge" android:process=":permission">
+      <intent-filter>
+        <action android:name="com.hgnbvct.enov28p.andpermission.bridge"/>
+      </intent-filter>
+    </service>
+    <activity android:configChanges="orientation" android:exported="false" android:name="com.yanzhenjie.permission.bridge.BridgeActivity" android:permission="com.hgnbvct.enov28p.andpermission.bridge" android:process=":permission" android:theme="@style/Permission.Theme.Activity.Transparent"/>
+    <provider android:authorities="com.hgnbvct.enov28p.file.path.share" android:exported="false" android:grantUriPermissions="true" android:name="com.yanzhenjie.permission.FileProvider">
+      <meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/permission_file_paths"/>
+    </provider>
+    <service android:exported="true" android:name="com.google.firebase.messaging.FirebaseMessagingService">
+      <intent-filter android:priority="-500">
+        <action android:name="com.google.firebase.MESSAGING_EVENT"/>
+      </intent-filter>
+    </service>
+    <provider android:authorities="com.hgnbvct.enov28p.workmanager-init" android:directBootAware="false" android:exported="false" android:multiprocess="true" android:name="androidx.work.impl.WorkManagerInitializer"/>
+    <service android:directBootAware="false" android:enabled="@bool/enable_system_alarm_service_default" android:exported="false" android:name="androidx.work.impl.background.systemalarm.SystemAlarmService"/>
+    <service android:directBootAware="false" android:enabled="@bool/enable_system_job_service_default" android:exported="true" android:name="androidx.work.impl.background.systemjob.SystemJobService" android:permission="android.permission.BIND_JOB_SERVICE"/>
+    <service android:directBootAware="false" android:enabled="@bool/enable_system_foreground_service_default" android:exported="false" android:name="androidx.work.impl.foreground.SystemForegroundService"/>
+    <receiver android:directBootAware="false" android:enabled="true" android:exported="false" android:name="androidx.work.impl.utils.ForceStopRunnable$BroadcastReceiver"/>
+    <receiver android:directBootAware="false" android:enabled="false" android:exported="false" android:name="androidx.work.impl.background.systemalarm.ConstraintProxy$BatteryChargingProxy">
+      <intent-filter>
+        <action android:name="android.intent.action.ACTION_POWER_CONNECTED"/>
+        <action android:name="android.intent.action.ACTION_POWER_DISCONNECTED"/>
+      </intent-filter>
+    </receiver>
+    <receiver android:directBootAware="false" android:enabled="false" android:exported="false" android:name="androidx.work.impl.background.systemalarm.ConstraintProxy$BatteryNotLowProxy">
+      <intent-filter>
+        <action android:name="android.intent.action.BATTERY_OKAY"/>
+        <action android:name="android.intent.action.BATTERY_LOW"/>
+      </intent-filter>
+    </receiver>
+    <receiver android:directBootAware="false" android:enabled="false" android:exported="false" android:name="androidx.work.impl.background.systemalarm.ConstraintProxy$StorageNotLowProxy">
+      <intent-filter>
+        <action android:name="android.intent.action.DEVICE_STORAGE_LOW"/>
+        <action android:name="android.intent.action.DEVICE_STORAGE_OK"/>
+      </intent-filter>
+    </receiver>
+    <receiver android:directBootAware="false" android:enabled="false" android:exported="false" android:name="androidx.work.impl.background.systemalarm.ConstraintProxy$NetworkStateProxy">
+      <intent-filter>
+        <action android:name="android.net.conn.CONNECTIVITY_CHANGE"/>
+      </intent-filter>
+    </receiver>
+    <receiver android:directBootAware="false" android:enabled="false" android:exported="false" android:name="androidx.work.impl.background.systemalarm.RescheduleReceiver">
+      <intent-filter>
+        <action android:name="android.intent.action.BOOT_COMPLETED"/>
+        <action android:name="android.intent.action.TIME_SET"/>
+        <action android:name="android.intent.action.TIMEZONE_CHANGED"/>
+      </intent-filter>
+    </receiver>
+    <receiver android:directBootAware="false" android:enabled="@bool/enable_system_alarm_service_default" android:exported="false" android:name="androidx.work.impl.background.systemalarm.ConstraintProxyUpdateReceiver">
+      <intent-filter>
+        <action android:name="androidx.work.impl.background.systemalarm.UpdateProxies"/>
+      </intent-filter>
+    </receiver>
+    <receiver android:directBootAware="false" android:enabled="true" android:exported="true" android:name="androidx.work.impl.diagnostics.DiagnosticsReceiver" android:permission="android.permission.DUMP">
+      <intent-filter>
+        <action android:name="androidx.work.diagnostics.REQUEST_DIAGNOSTICS"/>
+      </intent-filter>
+    </receiver>
+    <activity android:exported="false" android:name="com.google.android.gms.common.api.GoogleApiActivity" android:theme="@android:style/Theme.Translucent.NoTitleBar"/>
+    <receiver android:enabled="true" android:exported="false" android:name="com.google.android.gms.measurement.AppMeasurementReceiver"/>
+    <receiver android:enabled="true" android:exported="true" android:name="com.google.android.gms.measurement.AppMeasurementInstallReferrerReceiver" android:permission="android.permission.INSTALL_PACKAGES">
+      <intent-filter>
+        <action android:name="com.android.vending.INSTALL_REFERRER"/>
+      </intent-filter>
+    </receiver>
+    <service android:enabled="true" android:exported="false" android:name="com.google.android.gms.measurement.AppMeasurementService"/>
+    <service android:enabled="true" android:exported="false" android:name="com.google.android.gms.measurement.AppMeasurementJobService" android:permission="android.permission.BIND_JOB_SERVICE"/>
+    <receiver android:exported="true" android:name="com.google.firebase.iid.FirebaseInstanceIdReceiver" android:permission="com.google.android.c2dm.permission.SEND">
+      <intent-filter>
+        <action android:name="com.google.android.c2dm.intent.RECEIVE"/>
+        <category android:name="com.hgnbvct.enov28p"/>
+      </intent-filter>
+    </receiver>
+    <service android:exported="true" android:name="com.google.firebase.iid.FirebaseInstanceIdService">
+      <intent-filter android:priority="-500">
+        <action android:name="com.google.firebase.INSTANCE_ID_EVENT"/>
+      </intent-filter>
+    </service>
+    <provider android:authorities="com.hgnbvct.enov28p.firebaseinitprovider" android:exported="false" android:initOrder="100" android:name="com.google.firebase.provider.FirebaseInitProvider"/>
+    <service android:directBootAware="true" android:exported="false" android:name="androidx.room.MultiInstanceInvalidationService"/>
+  </application>
+</manifest>
+```
+
+
+#### 소스코드 디컴파일 분석 
+
+```java
+package com.cCjkmi.jgyiBr.moOYfb;
+
+import com.mik.proxy.guard.core.a;
+
+public class pCFNOnezC {
+    static {
+        a.a(new byte[]{76, 25, 0x4F, 26, 0x4F, 25, 76, 25}, new byte[]{45, 120});
+        pCFNOnezC.a();
+        System.loadLibrary(a.a(new byte[]{49, -1, 10, -30, 38, -3}, new byte[]{85, (byte)0x91}));
+    }
+
+    public static void a() {
+        a.a(new byte[]{75, -37, 78, -50, 72, -54, 72, -55, 89, -52, 76}, new byte[]{42, -88});
+    }
+
+    public static native void decrypt(byte[] arg0, String arg1) {
+    }
+}
+
+
+```
+
+decrypt 함수는 c 언어로 작성되어 라이브러리 형태로 존재한다. 
+
+![[Pasted image 20221201191604.png]]
+
+```c
+void Java_com_cCjkmi_jgyiBr_moOYfb_pCFNOnezC_decrypt(JNIEnv* param0, jbyteArray param1, jstring param2) {
+    int v0, v1;
+    jbyteArray v2;
+    jstring v3;
+    int v4;
+    char* ptr0;
+    int v5 = v0, v6 = v1;
+    char* ptr1 = ptr0;
+    jbyteArray v7 = v2;
+    jstring v8 = v3;
+    jbyte* ptr2 = param0[0]->GetByteArrayElements((JNIEnv*)param0, param2, NULL);
+    jbyte* ptr3 = ptr2;
+    char* __path = param0[0]->GetStringUTFChars((JNIEnv*)param0, v3, NULL);
+    jsize v9 = param0[0]->GetArrayLength((JNIEnv*)param0, param2);
+    int v10 = EVP_CIPHER_CTX_new();
+    int v11 = EVP_aes_128_ecb();
+    int v12 = EVP_DecryptInit_ex(v10, v11, 0, "dbcdcfghijklmaop", 0);
+    void* dest = →malloc((size_t)v9);
+
+    →__aeabi_memclr(dest, (size_t)v9);
+    int v13 = EVP_DecryptUpdate((unsigned int*)v10, dest, &v4, (int)ptr2, (unsigned int*)v9);
+    int v14 = v4;
+    int v15 = EVP_DecryptFinal_ex(v10, (int)(int*)((int)dest + v14), (int)&v4);
+    int v16 = v4;
+    EVP_CIPHER_CTX_free(v10);
+    FILE* __fp = →fopen(__path, "wb");
+    size_t v17 = →fwrite(dest, (size_t)(v16 + v14), 1, __fp);
+    int v18 = →fclose(__fp);
+    →free(dest);
+    param0[0]->ReleaseByteArrayElements((JNIEnv*)param0, param2, ptr3, 0);
+    param0[0]->ReleaseStringUTFChars((JNIEnv*)param0, v8, __path);
+}
+
+```
+
+키는 dbcdcfghijklmaop 을 사용하고 암호화방식은 aes 를 사용하는 것을 확인 할 수 있다. 
+python 으로 위 방식의 반대로 decrypt 코드를 작성한다. 
+
+```python
+from Crypto.Cipher import AES
+
+key="dbcdcfghijklmaop"
+
+cipher = AES.new(key.encode(), AES.MODE_ECB)
+fp = open('./secret-classes.dex', 'rb')
+fdata = fp.read()
+dec_fdata = cipher.decrypt(fdata)
+new_fp = open('./secret_classes_dec.dex', 'wb')
+new_fp.write(dec_fdata)
+
+fp.close()
+new_fp.close()
+```
